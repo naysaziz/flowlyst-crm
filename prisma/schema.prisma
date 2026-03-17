@@ -1,0 +1,709 @@
+// Flowlyst CRM — Prisma Schema
+// Derived from PRD §8 PostgreSQL schema
+// Generated: 2026-03-17
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum WorkspacePlan {
+  free
+  starter
+  growth
+  agency
+}
+
+enum MemberRole {
+  owner
+  admin
+  member
+  viewer
+}
+
+enum ContactBounceType {
+  hard
+  soft
+}
+
+enum ContactListType {
+  static
+  dynamic
+}
+
+enum PipelineStageType {
+  open
+  won
+  lost
+}
+
+enum DealStatus {
+  open
+  won
+  lost
+}
+
+enum ActivityType {
+  note
+  call
+  meeting
+  email_sent
+  email_opened
+  email_clicked
+  email_bounced
+  email_complained
+  deal_created
+  deal_stage_changed
+  deal_won
+  deal_lost
+  contact_created
+  task_completed
+  sequence_enrolled
+  sequence_completed
+  sequence_unsubscribed
+}
+
+enum TaskType {
+  call
+  email
+  meeting
+  task
+}
+
+enum EmailConfigMode {
+  flowlyst_pool
+  byos
+}
+
+enum CampaignStatus {
+  draft
+  scheduled
+  sending
+  sent
+  failed
+  cancelled
+}
+
+enum CampaignRecipientType {
+  list
+  segment
+  tag
+  all
+}
+
+enum EmailQueueStatus {
+  pending
+  sending
+  sent
+  failed
+  skipped
+}
+
+enum EmailEventType {
+  sent
+  delivered
+  opened
+  clicked
+  bounced
+  complained
+  unsubscribed
+}
+
+enum TrackingTokenType {
+  open
+  click
+}
+
+enum SequenceTriggerType {
+  manual
+  list_added
+  tag_added
+  deal_stage_changed
+  webhook
+}
+
+enum SequenceStatus {
+  draft
+  active
+  paused
+  archived
+}
+
+enum SequenceStepType {
+  email
+  wait
+  condition
+}
+
+enum SequenceStepDelayUnit {
+  hours
+  days
+  business_days
+}
+
+enum SequenceStepConditionType {
+  opened
+  clicked
+  replied
+}
+
+enum SequenceEnrollmentStatus {
+  active
+  completed
+  unsubscribed
+  exited
+  failed
+}
+
+// ============================================================
+// MODELS
+// ============================================================
+
+// Workspaces (tenants)
+model Workspace {
+  id           String    @id @default(uuid()) @db.Uuid
+  slug         String    @unique @db.VarChar(255)
+  name         String    @db.VarChar(255)
+  logoUrl      String?   @map("logo_url")
+  timezone     String    @default("America/New_York") @db.VarChar(255)
+  plan         WorkspacePlan @default(free)
+  trialEndsAt  DateTime? @map("trial_ends_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  members              WorkspaceMember[]
+  invites              WorkspaceInvite[]
+  contacts             Contact[]
+  contactLists         ContactList[]
+  pipelines            Pipeline[]
+  pipelineStages       PipelineStage[]
+  deals                Deal[]
+  activities           Activity[]
+  tasks                Task[]
+  emailConfig          WorkspaceEmailConfig?
+  emailTemplates       EmailTemplate[]
+  campaigns            Campaign[]
+  emailQueue           EmailQueue[]
+  emailEvents          EmailEvent[]
+  emailTrackingTokens  EmailTrackingToken[]
+  sequences            Sequence[]
+  sequenceSteps        SequenceStep[]
+  sequenceEnrollments  SequenceEnrollment[]
+  notifications        Notification[]
+  pushSubscriptions    PushSubscription[]
+
+  @@map("workspaces")
+}
+
+// Workspace members
+model WorkspaceMember {
+  id          String     @id @default(uuid()) @db.Uuid
+  workspaceId String     @map("workspace_id") @db.Uuid
+  userId      String     @map("user_id") @db.Uuid
+  role        MemberRole @default(member)
+  invitedBy   String?    @map("invited_by") @db.Uuid
+  joinedAt    DateTime   @default(now()) @map("joined_at") @db.Timestamptz
+
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+// Workspace invites
+model WorkspaceInvite {
+  id          String     @id @default(uuid()) @db.Uuid
+  workspaceId String     @map("workspace_id") @db.Uuid
+  email       String     @db.VarChar(255)
+  role        MemberRole @default(member)
+  token       String     @unique @db.VarChar(255)
+  invitedBy   String     @map("invited_by") @db.Uuid
+  expiresAt   DateTime   @map("expires_at") @db.Timestamptz
+  acceptedAt  DateTime?  @map("accepted_at") @db.Timestamptz
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("workspace_invites")
+}
+
+// Contacts
+model Contact {
+  id              String             @id @default(uuid()) @db.Uuid
+  workspaceId     String             @map("workspace_id") @db.Uuid
+  email           String             @db.VarChar(255)
+  firstName       String?            @map("first_name") @db.VarChar(255)
+  lastName        String?            @map("last_name") @db.VarChar(255)
+  phone           String?            @db.VarChar(50)
+  company         String?            @db.VarChar(255)
+  title           String?            @db.VarChar(255)
+  website         String?
+  avatarUrl       String?            @map("avatar_url")
+  tags            String[]           @default([])
+  customFields    Json               @default("{}") @map("custom_fields")
+  unsubscribed    Boolean            @default(false)
+  unsubscribedAt  DateTime?          @map("unsubscribed_at") @db.Timestamptz
+  bounced         Boolean            @default(false)
+  bouncedAt       DateTime?          @map("bounced_at") @db.Timestamptz
+  bounceType      ContactBounceType? @map("bounce_type")
+  source          String?            @db.VarChar(50)
+  ownerId         String?            @map("owner_id") @db.Uuid
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  workspace           Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contactListMembers  ContactListMember[]
+  dealContacts        DealContact[]
+  activities          Activity[]
+  tasks               Task[]
+  emailQueue          EmailQueue[]
+  emailEvents         EmailEvent[]
+  emailTrackingTokens EmailTrackingToken[]
+  sequenceEnrollments SequenceEnrollment[]
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId], name: "idx_contacts_workspace")
+  @@index([workspaceId, email], name: "idx_contacts_email")
+  @@map("contacts")
+}
+
+// Contact lists
+model ContactList {
+  id            String          @id @default(uuid()) @db.Uuid
+  workspaceId   String          @map("workspace_id") @db.Uuid
+  name          String          @db.VarChar(255)
+  description   String?
+  type          ContactListType @default(static)
+  filterRules   Json?           @map("filter_rules")
+  contactCount  Int             @default(0) @map("contact_count")
+  createdBy     String?         @map("created_by") @db.Uuid
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  workspace Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members   ContactListMember[]
+
+  @@map("contact_lists")
+}
+
+// Contact list members (join table)
+model ContactListMember {
+  listId    String   @map("list_id") @db.Uuid
+  contactId String   @map("contact_id") @db.Uuid
+  addedAt   DateTime @default(now()) @map("added_at") @db.Timestamptz
+
+  list    ContactList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  contact Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([listId, contactId])
+  @@map("contact_list_members")
+}
+
+// Pipelines
+model Pipeline {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  name        String   @default("Sales Pipeline") @db.VarChar(255)
+  isDefault   Boolean  @default(true) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  stages    PipelineStage[]
+  deals     Deal[]
+
+  @@map("pipelines")
+}
+
+// Pipeline stages
+model PipelineStage {
+  id          String            @id @default(uuid()) @db.Uuid
+  pipelineId  String            @map("pipeline_id") @db.Uuid
+  workspaceId String            @map("workspace_id") @db.Uuid
+  name        String            @db.VarChar(255)
+  position    Int               @default(0)
+  type        PipelineStageType @default(open)
+  probability Int               @default(50)
+  color       String            @default("#6366f1") @db.VarChar(20)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  pipeline  Pipeline  @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  deals     Deal[]
+
+  @@map("pipeline_stages")
+}
+
+// Deals
+model Deal {
+  id           String     @id @default(uuid()) @db.Uuid
+  workspaceId  String     @map("workspace_id") @db.Uuid
+  title        String     @db.VarChar(255)
+  value        Decimal?   @db.Decimal(12, 2)
+  currency     String     @default("USD") @db.VarChar(3)
+  stageId      String     @map("stage_id") @db.Uuid
+  pipelineId   String     @map("pipeline_id") @db.Uuid
+  ownerId      String?    @map("owner_id") @db.Uuid
+  closeDate    DateTime?  @map("close_date") @db.Date
+  probability  Int?
+  status       DealStatus @default(open)
+  customFields Json       @default("{}") @map("custom_fields")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  workspace    Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  stage        PipelineStage  @relation(fields: [stageId], references: [id])
+  pipeline     Pipeline       @relation(fields: [pipelineId], references: [id])
+  dealContacts DealContact[]
+  activities   Activity[]
+  tasks        Task[]
+
+  @@index([workspaceId], name: "idx_deals_workspace")
+  @@index([stageId], name: "idx_deals_stage")
+  @@index([ownerId], name: "idx_deals_owner")
+  @@map("deals")
+}
+
+// Deal ↔ Contact (many-to-many)
+model DealContact {
+  dealId    String  @map("deal_id") @db.Uuid
+  contactId String  @map("contact_id") @db.Uuid
+  isPrimary Boolean @default(false) @map("is_primary")
+
+  deal    Deal    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@id([dealId, contactId])
+  @@map("deal_contacts")
+}
+
+// Activity timeline
+model Activity {
+  id          String       @id @default(uuid()) @db.Uuid
+  workspaceId String       @map("workspace_id") @db.Uuid
+  contactId   String?      @map("contact_id") @db.Uuid
+  dealId      String?      @map("deal_id") @db.Uuid
+  type        ActivityType
+  subject     String?      @db.VarChar(500)
+  body        String?
+  metadata    Json         @default("{}")
+  performedBy String?      @map("performed_by") @db.Uuid
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  deal      Deal?     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([contactId, createdAt(sort: Desc)], name: "idx_activities_contact")
+  @@index([dealId, createdAt(sort: Desc)], name: "idx_activities_deal")
+  @@index([workspaceId, createdAt(sort: Desc)], name: "idx_activities_workspace")
+  @@map("activities")
+}
+
+// Tasks
+model Task {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  contactId   String?   @map("contact_id") @db.Uuid
+  dealId      String?   @map("deal_id") @db.Uuid
+  title       String    @db.VarChar(500)
+  notes       String?
+  type        TaskType  @default(task)
+  dueAt       DateTime? @map("due_at") @db.Timestamptz
+  assignedTo  String?   @map("assigned_to") @db.Uuid
+  completed   Boolean   @default(false)
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+  createdBy   String?   @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  deal      Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  @@map("tasks")
+}
+
+// Workspace SES email config
+model WorkspaceEmailConfig {
+  id             String          @id @default(uuid()) @db.Uuid
+  workspaceId    String          @unique @map("workspace_id") @db.Uuid
+  mode           EmailConfigMode @default(flowlyst_pool)
+  awsRegion      String          @default("us-east-1") @map("aws_region") @db.VarChar(50)
+  awsKeyVaultId  String?         @map("aws_key_vault_id")
+  fromName       String          @default("Flowlyst") @map("from_name") @db.VarChar(255)
+  fromEmail      String?         @map("from_email") @db.VarChar(255)
+  replyTo        String?         @map("reply_to") @db.VarChar(255)
+  maxSendRate    Int             @default(14) @map("max_send_rate")
+  verifiedAt     DateTime?       @map("verified_at") @db.Timestamptz
+  dkimStatus     String?         @map("dkim_status") @db.VarChar(50)
+  spfStatus      String?         @map("spf_status") @db.VarChar(50)
+  dmarcStatus    String?         @map("dmarc_status") @db.VarChar(50)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("workspace_email_configs")
+}
+
+// Email templates
+model EmailTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  subject     String   @db.VarChar(998)
+  htmlContent String   @map("html_content")
+  textContent String?  @map("text_content")
+  blocksJson  Json?    @map("blocks_json")
+  createdBy   String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("email_templates")
+}
+
+// Campaigns
+model Campaign {
+  id               String                @id @default(uuid()) @db.Uuid
+  workspaceId      String                @map("workspace_id") @db.Uuid
+  name             String                @db.VarChar(255)
+  subject          String                @db.VarChar(998)
+  preheader        String?               @db.VarChar(255)
+  fromName         String                @map("from_name") @db.VarChar(255)
+  fromEmail        String                @map("from_email") @db.VarChar(255)
+  replyTo          String?               @map("reply_to") @db.VarChar(255)
+  htmlContent      String                @map("html_content")
+  textContent      String?               @map("text_content")
+  blocksJson       Json?                 @map("blocks_json")
+  recipientType    CampaignRecipientType @map("recipient_type")
+  recipientIds     String[]              @map("recipient_ids") @db.Uuid
+  recipientTags    String[]              @map("recipient_tags")
+  status           CampaignStatus        @default(draft)
+  scheduledFor     DateTime?             @map("scheduled_for") @db.Timestamptz
+  sentAt           DateTime?             @map("sent_at") @db.Timestamptz
+  totalRecipients  Int                   @default(0) @map("total_recipients")
+  statSent         Int                   @default(0) @map("stat_sent")
+  statDelivered    Int                   @default(0) @map("stat_delivered")
+  statOpened       Int                   @default(0) @map("stat_opened")
+  statClicked      Int                   @default(0) @map("stat_clicked")
+  statBounced      Int                   @default(0) @map("stat_bounced")
+  statComplained   Int                   @default(0) @map("stat_complained")
+  statUnsubscribed Int                   @default(0) @map("stat_unsubscribed")
+  createdBy        String?               @map("created_by") @db.Uuid
+  createdAt        DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  workspace           Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  emailQueue          EmailQueue[]
+  emailEvents         EmailEvent[]
+  emailTrackingTokens EmailTrackingToken[]
+
+  @@index([workspaceId], name: "idx_campaigns_workspace")
+  @@index([status, scheduledFor], name: "idx_campaigns_status")
+  @@map("campaigns")
+}
+
+// Email queue
+model EmailQueue {
+  id             String          @id @default(uuid()) @db.Uuid
+  workspaceId    String          @map("workspace_id") @db.Uuid
+  campaignId     String?         @map("campaign_id") @db.Uuid
+  sequenceStepId String?         @map("sequence_step_id") @db.Uuid
+  contactId      String          @map("contact_id") @db.Uuid
+  toEmail        String          @map("to_email") @db.VarChar(255)
+  fromName       String          @map("from_name") @db.VarChar(255)
+  fromEmail      String          @map("from_email") @db.VarChar(255)
+  replyTo        String?         @map("reply_to") @db.VarChar(255)
+  subject        String          @db.VarChar(998)
+  htmlContent    String          @map("html_content")
+  textContent    String?         @map("text_content")
+  status         EmailQueueStatus @default(pending)
+  sendAt         DateTime        @default(now()) @map("send_at") @db.Timestamptz
+  sentAt         DateTime?       @map("sent_at") @db.Timestamptz
+  sesMessageId   String?         @map("ses_message_id")
+  errorMessage   String?         @map("error_message")
+  retryCount     Int             @default(0) @map("retry_count")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign     Campaign?     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  sequenceStep SequenceStep? @relation(fields: [sequenceStepId], references: [id], onDelete: Cascade)
+  contact      Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  emailEvents  EmailEvent[]
+  trackingTokens EmailTrackingToken[]
+
+  @@index([workspaceId, status, sendAt], name: "idx_email_queue_pending")
+  @@map("email_queue")
+}
+
+// Email events (opens, clicks, bounces, complaints)
+model EmailEvent {
+  id             String         @id @default(uuid()) @db.Uuid
+  workspaceId    String         @map("workspace_id") @db.Uuid
+  contactId      String?        @map("contact_id") @db.Uuid
+  campaignId     String?        @map("campaign_id") @db.Uuid
+  sequenceStepId String?        @map("sequence_step_id") @db.Uuid
+  emailQueueId   String?        @map("email_queue_id") @db.Uuid
+  sesMessageId   String?        @map("ses_message_id")
+  type           EmailEventType
+  linkUrl        String?        @map("link_url")
+  bounceType     String?        @map("bounce_type") @db.VarChar(10)
+  userAgent      String?        @map("user_agent")
+  ipAddress      String?        @map("ip_address") @db.VarChar(45)
+  metadata       Json           @default("{}")
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz
+
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact      Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  campaign     Campaign?     @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  sequenceStep SequenceStep? @relation(fields: [sequenceStepId], references: [id], onDelete: SetNull)
+  emailQueue   EmailQueue?   @relation(fields: [emailQueueId], references: [id], onDelete: SetNull)
+
+  @@index([contactId, createdAt(sort: Desc)], name: "idx_email_events_contact")
+  @@index([campaignId, type], name: "idx_email_events_campaign")
+  @@index([sesMessageId], name: "idx_email_events_ses")
+  @@map("email_events")
+}
+
+// Email tracking tokens (open pixel + click)
+model EmailTrackingToken {
+  id             String            @id @default(uuid()) @db.Uuid
+  workspaceId    String            @map("workspace_id") @db.Uuid
+  contactId      String            @map("contact_id") @db.Uuid
+  campaignId     String?           @map("campaign_id") @db.Uuid
+  sequenceStepId String?           @map("sequence_step_id") @db.Uuid
+  emailQueueId   String?           @map("email_queue_id") @db.Uuid
+  type           TrackingTokenType
+  destinationUrl String?           @map("destination_url")
+  token          String            @unique @db.VarChar(64)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact      Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  campaign     Campaign?     @relation(fields: [campaignId], references: [id])
+  sequenceStep SequenceStep? @relation(fields: [sequenceStepId], references: [id])
+  emailQueue   EmailQueue?   @relation(fields: [emailQueueId], references: [id])
+
+  @@index([token], name: "idx_tracking_token")
+  @@map("email_tracking_tokens")
+}
+
+// Sequences (drip automation)
+model Sequence {
+  id              String              @id @default(uuid()) @db.Uuid
+  workspaceId     String              @map("workspace_id") @db.Uuid
+  name            String              @db.VarChar(255)
+  description     String?
+  triggerType     SequenceTriggerType @map("trigger_type")
+  triggerConfig   Json                @default("{}") @map("trigger_config")
+  status          SequenceStatus      @default(draft)
+  exitConditions  Json                @default("{}") @map("exit_conditions")
+  createdBy       String?             @map("created_by") @db.Uuid
+  createdAt       DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  steps       SequenceStep[]
+  enrollments SequenceEnrollment[]
+
+  @@map("sequences")
+}
+
+// Sequence steps
+model SequenceStep {
+  id             String                     @id @default(uuid()) @db.Uuid
+  sequenceId     String                     @map("sequence_id") @db.Uuid
+  workspaceId    String                     @map("workspace_id") @db.Uuid
+  position       Int                        @default(0)
+  type           SequenceStepType
+  subject        String?                    @db.VarChar(998)
+  htmlContent    String?                    @map("html_content")
+  textContent    String?                    @map("text_content")
+  fromName       String?                    @map("from_name") @db.VarChar(255)
+  fromEmail      String?                    @map("from_email") @db.VarChar(255)
+  delayValue     Int?                       @map("delay_value")
+  delayUnit      SequenceStepDelayUnit?     @map("delay_unit")
+  conditionType  SequenceStepConditionType? @map("condition_type")
+  yesStepId      String?                    @map("yes_step_id") @db.Uuid
+  noStepId       String?                    @map("no_step_id") @db.Uuid
+  createdAt      DateTime                   @default(now()) @map("created_at") @db.Timestamptz
+
+  sequence    Sequence             @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  yesStep     SequenceStep?        @relation("YesBranch", fields: [yesStepId], references: [id])
+  yesStepOf   SequenceStep[]       @relation("YesBranch")
+  noStep      SequenceStep?        @relation("NoBranch", fields: [noStepId], references: [id])
+  noStepOf    SequenceStep[]       @relation("NoBranch")
+  enrollments SequenceEnrollment[]
+  emailQueue  EmailQueue[]
+  emailEvents EmailEvent[]
+  trackingTokens EmailTrackingToken[]
+
+  @@map("sequence_steps")
+}
+
+// Sequence enrollments
+model SequenceEnrollment {
+  id            String                   @id @default(uuid()) @db.Uuid
+  sequenceId    String                   @map("sequence_id") @db.Uuid
+  workspaceId   String                   @map("workspace_id") @db.Uuid
+  contactId     String                   @map("contact_id") @db.Uuid
+  currentStepId String?                  @map("current_step_id") @db.Uuid
+  status        SequenceEnrollmentStatus @default(active)
+  nextStepAt    DateTime?                @map("next_step_at") @db.Timestamptz
+  enrolledAt    DateTime                 @default(now()) @map("enrolled_at") @db.Timestamptz
+  completedAt   DateTime?                @map("completed_at") @db.Timestamptz
+
+  sequence    Sequence      @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact     Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  currentStep SequenceStep? @relation(fields: [currentStepId], references: [id])
+
+  @@unique([sequenceId, contactId, enrolledAt])
+  @@index([workspaceId, status, nextStepAt], name: "idx_sequence_enrollments_active")
+  @@map("sequence_enrollments")
+}
+
+// In-app notifications
+model Notification {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  type        String   @db.VarChar(100)
+  title       String   @db.VarChar(500)
+  body        String?
+  metadata    Json     @default("{}")
+  read        Boolean  @default(false)
+  readAt      DateTime? @map("read_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, createdAt(sort: Desc)], name: "idx_notifications_user")
+  @@map("notifications")
+}
+
+// Push notification subscriptions
+model PushSubscription {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  endpoint    String
+  p256dh      String
+  authKey     String   @map("auth_key")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint])
+  @@map("push_subscriptions")
+}
