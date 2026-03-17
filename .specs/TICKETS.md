@@ -31,15 +31,15 @@
            seed.sql with workspace + admin user, verify RLS with supabase client test
     status: pending
 
-[ ] TICKET-003: Supabase Auth — email/password + Google OAuth flows
-    branch: feat/ticket-003-auth
-    PR: (to be opened)
+[R] TICKET-003: Supabase Auth — email/password + Google OAuth flows
+    branch: feat/TICKET-003-auth
+    PR: #1 (changes requested — 3 critical bugs, see PR comment)
     deps: TICKET-002
     effort: 2 days
     scope: @supabase/ssr server/client helpers, login/signup/callback pages
            (src/app/(auth)/), session cookie management, Google OAuth provider config
            in Supabase dashboard, email confirmation flow, password reset flow
-    status: pending
+    status: changes-requested
 
 [ ] TICKET-004: Next.js middleware — auth guard + workspace resolution
     branch: feat/ticket-004-middleware
