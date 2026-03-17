@@ -31,7 +31,7 @@
            seed.sql with workspace + admin user, verify RLS with supabase client test
     status: pending
 
-[R] TICKET-003: Supabase Auth — email/password + Google OAuth flows
+[Q] TICKET-003: Supabase Auth — email/password + Google OAuth flows
     branch: feat/TICKET-003-auth
     PR: #1 (changes requested — 3 critical bugs, see PR comment)
     deps: TICKET-002
