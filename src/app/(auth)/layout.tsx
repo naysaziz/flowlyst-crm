@@ -15,7 +15,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         {children}
         <div className="mx-auto flex w-full flex-col justify-center space-y-2 md:w-1/2 sm:w-auto">
           <Link 
-            href={'/login'} 
+            href={'/signup'} 
             className="hover:text-accent-foreground hover:underline text-sm text-muted-foreground underline-offset-4"
           >
             Don't have an account? Sign up
