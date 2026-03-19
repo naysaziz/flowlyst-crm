@@ -48,15 +48,25 @@ export async function middleware(req: NextRequest) {
     res.headers.set('x-workspace-slug', workspaceSlug)
 
     // protect app routes
-    if (pathname.startsWith('/app') && !session) {
+    if ((pathname === '/app' || pathname.startsWith('/app/')) && !session) {
       const redirectUrl = new URL('/login', req.url)
-      return NextResponse.redirect(redirectUrl)
+      const redirectRes = NextResponse.redirect(redirectUrl)
+      // Transfer cookies from res to redirectRes
+      res.cookies.getAll().forEach(({ name, value, options }) => {
+        redirectRes.cookies.set(name, value, options)
+      })
+      return redirectRes
     }
 
     // optional: redirect logged in to app (or dashboard? keep / for now)
     if (session && ['/login', '/signup'].includes(pathname)) {
       const redirectUrl = new URL('/', req.url)
-      return NextResponse.redirect(redirectUrl)
+      const redirectRes = NextResponse.redirect(redirectUrl)
+      // Transfer cookies from res to redirectRes
+      res.cookies.getAll().forEach(({ name, value, options }) => {
+        redirectRes.cookies.set(name, value, options)
+      })
+      return redirectRes
     }
   } catch (error) {
     console.error('Middleware error:', error)
