@@ -43,13 +43,13 @@
 
 [ ] TICKET-004: Next.js middleware — auth guard + workspace resolution
     branch: feat/ticket-004-middleware
-    PR: (to be opened)
+    PR: #2
     deps: TICKET-003
     effort: 1 day
     scope: src/app/middleware.ts — protect /app/* routes, redirect unauthenticated users
            to /login, resolve workspace slug from URL or user's default workspace,
            inject workspace context into request headers
-    status: pending
+    status: changes-requested
 
 [ ] TICKET-005: Core layout — sidebar nav, top bar, workspace switcher
     branch: feat/ticket-005-layout
