@@ -21,15 +21,15 @@
            prisma generate + db push, package.json Appendix B deps, npm install
     status: deployed (init commit)
 
-[ ] TICKET-002: Supabase project setup + full DB schema migration (all tables + RLS policies)
+[r] TICKET-002: Supabase project setup + full DB schema migration (all tables + RLS policies)
     branch: feat/ticket-002-supabase-schema
-    PR: (to be opened)
+    PR: #3
     deps: TICKET-001
     effort: 2 days
     scope: Create Supabase project, run PRD §8 SQL migration (extensions, tables, RLS policies,
            helper functions, pg_cron jobs), update .env.local with Supabase URL/keys,
            seed.sql with workspace + admin user, verify RLS with supabase client test
-    status: pending
+    status: in-review
 
 [ ] TICKET-003: Supabase Auth — email/password + Google OAuth flows
     branch: feat/ticket-003-auth
