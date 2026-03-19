@@ -721,6 +721,10 @@ ALTER TABLE public."notifications" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public."push_subscriptions" ENABLE ROW LEVEL SECURITY;
 
 -- Policy for workspace_members
+-- Bootstrap: allow authenticated users to insert themselves as owner when creating a new workspace
+CREATE POLICY "Authenticated users can join as owner on workspace creation" ON public."workspace_members"
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+-- Read/update/delete: only existing workspace members
 CREATE POLICY "Workspace members can manage workspace_members" ON public."workspace_members"
   FOR ALL USING (workspace_id = ANY(user_workspace_ids())) WITH CHECK (workspace_id = ANY(user_workspace_ids()));
 
@@ -800,7 +804,15 @@ CREATE POLICY "Workspace members can manage notifications" ON public."notificati
 CREATE POLICY "Workspace members can manage push_subscriptions" ON public."push_subscriptions"
   FOR ALL USING (workspace_id = ANY(user_workspace_ids())) WITH CHECK (workspace_id = ANY(user_workspace_ids()));
 
--- TODO: Add RLS policy for workspaces
+-- Policy for workspaces
+-- Bootstrap: authenticated users can INSERT their first workspace
+CREATE POLICY "Authenticated users can create workspaces" ON public."workspaces"
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+-- Read/update: only members of the workspace
+CREATE POLICY "Workspace members can view workspaces" ON public."workspaces"
+  FOR SELECT USING (id = ANY(user_workspace_ids()));
+CREATE POLICY "Workspace members can update workspaces" ON public."workspaces"
+  FOR UPDATE USING (id = ANY(user_workspace_ids())) WITH CHECK (id = ANY(user_workspace_ids()));
 -- Policy for contact_list_members
 CREATE POLICY "Workspace members can manage contact_list_members" ON public."contact_list_members"
   FOR ALL USING (EXISTS (
@@ -821,40 +833,55 @@ CREATE POLICY "Workspace members can manage deal_contacts" ON public."deal_conta
     WHERE d.id = deal_id AND d.workspace_id = ANY(user_workspace_ids())
   ));
 
--- Helper functions (e.g., for pg_cron)
+-- project_config table — stores project_ref for Edge Function URLs
+-- Insert your Supabase project ref after running this migration:
+--   INSERT INTO public.project_config (project_ref) VALUES ('your-project-ref');
+CREATE TABLE IF NOT EXISTS public.project_config (
+  project_ref TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Email queue processor — called by pg_cron every minute
+-- Uses service_role_key (set via: ALTER DATABASE postgres SET app.service_role_key = '...';)
 CREATE OR REPLACE FUNCTION public.process_email_queue()
 RETURNS void AS $$
+DECLARE
+  _project_ref text;
+  _service_key text;
 BEGIN
-  -- Dequeue and send emails via SES Edge Function trigger
+  _project_ref := COALESCE(
+    (SELECT project_ref FROM public.project_config LIMIT 1),
+    current_setting('app.project_ref', true)
+  );
+  _service_key := current_setting('app.service_role_key', true);
+
+  IF _project_ref IS NULL OR _project_ref = '' THEN
+    RAISE WARNING 'process_email_queue: project_ref not configured, skipping';
+    RETURN;
+  END IF;
+
+  IF _service_key IS NULL OR _service_key = '' THEN
+    RAISE WARNING 'process_email_queue: service_role_key not configured, skipping';
+    RETURN;
+  END IF;
+
   PERFORM net.http_post(
-    url := format('https://%s.supabase.co/functions/v1/email-sender', COALESCE((SELECT project_ref FROM public.project_config LIMIT 1), current_setting('app.project_ref', true)))::text,
-    headers := jsonb_build_object('Authorization', 'Bearer ' || current_setting('app.current_jwt', true)),
+    url := format('https://%s.supabase.co/functions/v1/email-sender', _project_ref),
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer ' || _service_key,
+      'Content-Type', 'application/json'
+    ),
     body := jsonb_build_object('batch_size', 14)
   );
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- pg_cron jobs
-SELECT cron.schedule('email-queue-processor', '* * * * *', 'SELECT process_email_queue();');
-
-
-  );
-END;
-$$ LANGUAGE plpgsql;
-
--- pg_cron jobs
-SELECT cron.schedule('email-queue-processor', '* * * * *', 'SELECT process_email_queue();');
-
--queue-processor', '* * * * *', 'SELECT process_email_queue();');
-
-obs
-SELECT cron.schedule('email-queue-processor', '* * * * *', 'SELECT process_email_queue();');
-
-
-  );
-END;
-$$ LANGUAGE plpgsql;
-
--- pg_cron jobs
-SELECT cron.schedule('email-queue-processor', '* * * * *', 'SELECT process_email_queue();');
+-- pg_cron job — idempotent (safe to re-run migration)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'email-queue-processor') THEN
+    PERFORM cron.unschedule('email-queue-processor');
+  END IF;
+END $$;
+SELECT cron.schedule('email-queue-processor', '* * * * *', 'SELECT public.process_email_queue();');
 

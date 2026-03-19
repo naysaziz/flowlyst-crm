@@ -1,21 +1,31 @@
 -- supabase/seed.sql — Demo data for Flowlyst CRM
 -- Run: supabase db seed
 -- Assumes service role key (bypasses RLS)
+--
+-- BEFORE RUNNING: set SEED_ADMIN_USER_ID to a real auth.users UUID.
+-- Get it from: Supabase Dashboard → Authentication → Users → copy user UUID
+-- Or pass it as a psql variable: psql -v admin_user_id="<uuid>" -f seed.sql
+-- If left as null, workspace_members row is skipped (workspace exists but has no owner).
 
 -- Create demo workspace
 DO $$
 DECLARE
   ws_id uuid := gen_random_uuid();
   pipe_id uuid := gen_random_uuid();
-  admin_user_id uuid := '00000000-0000-0000-0000-000000000000'::uuid; -- Replace with real Supabase Auth user ID (e.g., from dashboard)
+  -- Set this to a real auth.users UUID before seeding, or leave null to skip member row
+  admin_user_id uuid := NULL;
 BEGIN
-  -- Workspace
+  -- Workspace (always inserted — no user dependency)
   INSERT INTO public.workspaces (id, slug, name, timezone)
-  VALUES (ws_id, 'flowlyst-demo', 'Flowlyst Demo', 'America/Los_Angeles');
+  VALUES (ws_id, 'flowlyst-demo', 'Flowlyst Demo', 'America/Los_Angeles')
+  ON CONFLICT (slug) DO NOTHING;
 
-  -- Demo admin member
-  INSERT INTO public.workspace_members (id, workspace_id, user_id, role, joined_at)
-  VALUES (gen_random_uuid(), ws_id, admin_user_id, 'owner', now());
+  -- Demo admin member (only if admin_user_id is set)
+  IF admin_user_id IS NOT NULL THEN
+    INSERT INTO public.workspace_members (id, workspace_id, user_id, role, joined_at)
+    VALUES (gen_random_uuid(), ws_id, admin_user_id, 'owner', now())
+    ON CONFLICT DO NOTHING;
+  END IF;
 
   -- Default pipeline
   INSERT INTO public.pipelines (id, workspace_id, name, is_default)
