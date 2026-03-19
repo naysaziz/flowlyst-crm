@@ -12,7 +12,21 @@ export async function middleware(req: NextRequest) {
   }
 
   let res = NextResponse.next()
+  const pathname = req.nextUrl.pathname
 
+  // Workspace slug resolution with validation
+  let workspaceSlug = 'default'
+  if (pathname.startsWith('/app/')) {
+    const segments = pathname.split('/').slice(2).filter(Boolean) // Filter empty segments (handles /app/)
+    if (segments.length > 0) {
+      const rawSlug = segments[0]
+      // Validate slug: alphanumeric, hyphens, underscores, 1-32 chars
+      const isValidSlug = /^[a-z0-9-_]{1,32}$/.test(rawSlug)
+      workspaceSlug = isValidSlug ? rawSlug : 'default'
+    }
+  }
+
+  let session = null
   try {
     const supabase = createServerClient(
       supabaseUrl,
@@ -31,46 +45,40 @@ export async function middleware(req: NextRequest) {
       }
     )
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    const pathname = req.nextUrl.pathname
-
-    // Workspace slug resolution
-    let workspaceSlug = 'default'
-    if (pathname.startsWith('/app/')) {
-      const segments = pathname.split('/').slice(2).filter(Boolean) // Filter empty segments (handles /app/)
-      if (segments.length > 0) {
-        workspaceSlug = segments[0]
-      }
-    }
-    res.headers.set('x-workspace-slug', workspaceSlug)
-
-    // protect app routes
-    if ((pathname === '/app' || pathname.startsWith('/app/')) && !session) {
-      const redirectUrl = new URL('/login', req.url)
-      const redirectRes = NextResponse.redirect(redirectUrl)
-      // Transfer cookies from res to redirectRes
-      res.cookies.getAll().forEach(({ name, value, options }) => {
-        redirectRes.cookies.set(name, value, options)
-      })
-      return redirectRes
-    }
-
-    // optional: redirect logged in to app (or dashboard? keep / for now)
-    if (session && ['/login', '/signup'].includes(pathname)) {
-      const redirectUrl = new URL('/', req.url)
-      const redirectRes = NextResponse.redirect(redirectUrl)
-      // Transfer cookies from res to redirectRes
-      res.cookies.getAll().forEach(({ name, value, options }) => {
-        redirectRes.cookies.set(name, value, options)
-      })
-      return redirectRes
-    }
+    const { data: { session: supabaseSession } } = await supabase.auth.getSession()
+    session = supabaseSession
   } catch (error) {
     console.error('Middleware error:', error)
-    // Don't crash the request; continue without auth/workspace context
+    // Session remains null, which will cause auth guard to redirect from /app routes
+  }
+
+  // Set workspace slug header (after validation)
+  res.headers.set('x-workspace-slug', workspaceSlug)
+
+  // Protect app routes
+  if ((pathname === '/app' || pathname.startsWith('/app/')) && !session) {
+    const redirectUrl = new URL('/login', req.url)
+    const redirectRes = NextResponse.redirect(redirectUrl)
+    // Transfer cookies from res to redirectRes
+    res.cookies.getAll().forEach(({ name, value, options }) => {
+      redirectRes.cookies.set(name, value, options)
+    })
+    // Also copy workspace slug header to redirect response
+    redirectRes.headers.set('x-workspace-slug', workspaceSlug)
+    return redirectRes
+  }
+
+  // Optional: redirect logged in to app (or dashboard? keep / for now)
+  if (session && ['/login', '/signup'].includes(pathname)) {
+    const redirectUrl = new URL('/', req.url)
+    const redirectRes = NextResponse.redirect(redirectUrl)
+    // Transfer cookies from res to redirectRes
+    res.cookies.getAll().forEach(({ name, value, options }) => {
+      redirectRes.cookies.set(name, value, options)
+    })
+    // Also copy workspace slug header to redirect response
+    redirectRes.headers.set('x-workspace-slug', workspaceSlug)
+    return redirectRes
   }
 
   return res
