@@ -49,7 +49,7 @@
     scope: src/app/middleware.ts — protect /app/* routes, redirect unauthenticated users
            to /login, resolve workspace slug from URL or user's default workspace,
            inject workspace context into request headers
-    status: changes-requested
+    status: deployed
 
 [ ] TICKET-005: Core layout — sidebar nav, top bar, workspace switcher
     branch: feat/ticket-005-layout
