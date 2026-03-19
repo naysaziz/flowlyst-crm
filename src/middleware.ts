@@ -37,7 +37,7 @@ export async function middleware(req: NextRequest) {
             return req.cookies.getAll()
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) => 
+            cookiesToSet.forEach(({ name, value, options }) =>
               res.cookies.set(name, value, options)
             )
           },
@@ -59,8 +59,8 @@ export async function middleware(req: NextRequest) {
   if ((pathname === '/app' || pathname.startsWith('/app/')) && !session) {
     const redirectUrl = new URL('/login', req.url)
     const redirectRes = NextResponse.redirect(redirectUrl)
-    // Transfer cookies from res to redirectRes
-    res.cookies.getAll().forEach(({ name, value, options }) => {
+    // Transfer cookies from res to redirectRes (spread preserves httpOnly, secure, sameSite, etc.)
+    res.cookies.getAll().forEach(({ name, value, ...options }) => {
       redirectRes.cookies.set(name, value, options)
     })
     // Also copy workspace slug header to redirect response
@@ -72,8 +72,8 @@ export async function middleware(req: NextRequest) {
   if (session && ['/login', '/signup'].includes(pathname)) {
     const redirectUrl = new URL('/', req.url)
     const redirectRes = NextResponse.redirect(redirectUrl)
-    // Transfer cookies from res to redirectRes
-    res.cookies.getAll().forEach(({ name, value, options }) => {
+    // Transfer cookies from res to redirectRes (spread preserves httpOnly, secure, sameSite, etc.)
+    res.cookies.getAll().forEach(({ name, value, ...options }) => {
       redirectRes.cookies.set(name, value, options)
     })
     // Also copy workspace slug header to redirect response

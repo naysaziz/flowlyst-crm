@@ -293,6 +293,55 @@ describe('middleware — workspace slug validation', () => {
   })
 })
 
+describe('middleware — false positive route guard', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key-test')
+    mockGetSession.mockReset()
+  })
+
+  it('does NOT guard /apples (only /app and /app/* are guarded)', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null } })
+
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/apples')
+    const response = await middleware(req)
+
+    // /apples should pass through — not guarded
+    expect(response?.status).not.toBe(307)
+    const location = response?.headers.get('location')
+    expect(location).toBeNull()
+  })
+})
+
+describe('middleware — env var validation', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('returns 500 when NEXT_PUBLIC_SUPABASE_URL is missing', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key-test')
+
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/app/dashboard')
+    const response = await middleware(req)
+
+    expect(response?.status).toBe(500)
+  })
+
+  it('returns 500 when NEXT_PUBLIC_SUPABASE_ANON_KEY is missing', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', '')
+
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/app/dashboard')
+    const response = await middleware(req)
+
+    expect(response?.status).toBe(500)
+  })
+})
+
 describe('middleware — error handling security', () => {
   beforeEach(() => {
     vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co')
