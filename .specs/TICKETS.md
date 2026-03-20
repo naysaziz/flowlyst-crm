@@ -283,15 +283,15 @@
            notifications table, dropdown list (mark-read, mark-all-read), deep links
     status: pending
 
-[ ] TICKET-028: Team invite flow (send invite → accept → join workspace)
+[r] TICKET-028: Team invite flow (send invite → accept → join workspace)
     branch: feat/ticket-028-team-invites
-    PR: #X
+    PR: #7
     deps: TICKET-003
     effort: 2 days
     scope: Settings > Team — invite by email (create workspace_invites row, send email via
            SES), /invite/[token] accept page (validate expiry, create workspace_members),
            role assignment, pending invite list with revoke
-    status: pending
+    status: in-review
 
 [ ] TICKET-029: Settings pages — workspace, email config, team members
     branch: feat/ticket-029-settings
