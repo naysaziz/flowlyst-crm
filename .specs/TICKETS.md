@@ -1,6 +1,6 @@
 # TICKETS.md — Flowlyst CRM & Email Automation Platform
 
-**Last updated:** 2026-03-17  
+**Last updated:** 2026-03-18  
 **Repo:** github.com/clio-flowlyst/flowlyst-crm  
 **Branching strategy:** `feat/ticket-XXX-short-description` → PR → code review → merge to `main`  
 **PR template:** All PRs must include: scope, test plan, screenshot/recording (UI), migration note (DB changes)
@@ -31,25 +31,25 @@
            seed.sql with workspace + admin user, verify RLS with supabase client test
     status: pending
 
-[ ] TICKET-003: Supabase Auth — email/password + Google OAuth flows
-    branch: feat/ticket-003-auth
-    PR: (to be opened)
+[x] TICKET-003: Supabase Auth — email/password + Google OAuth flows
+    branch: feat/TICKET-003-auth
+    PR: #1 (merged to main)
     deps: TICKET-002
     effort: 2 days
     scope: @supabase/ssr server/client helpers, login/signup/callback pages
            (src/app/(auth)/), session cookie management, Google OAuth provider config
            in Supabase dashboard, email confirmation flow, password reset flow
-    status: pending
+    status: deployed
 
 [ ] TICKET-004: Next.js middleware — auth guard + workspace resolution
     branch: feat/ticket-004-middleware
-    PR: (to be opened)
+    PR: #2
     deps: TICKET-003
     effort: 1 day
     scope: src/app/middleware.ts — protect /app/* routes, redirect unauthenticated users
            to /login, resolve workspace slug from URL or user's default workspace,
            inject workspace context into request headers
-    status: pending
+    status: changes-requested
 
 [ ] TICKET-005: Core layout — sidebar nav, top bar, workspace switcher
     branch: feat/ticket-005-layout
