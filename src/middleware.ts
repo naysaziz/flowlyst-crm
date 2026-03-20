@@ -56,7 +56,7 @@ export async function middleware(req: NextRequest) {
   res.headers.set('x-workspace-slug', workspaceSlug)
 
   // Protect app routes
-  if ((pathname === '/app' || pathname.startsWith('/app/')) && !session) {
+  if ((pathname === '/app' || pathname.startsWith('/app/') || pathname.startsWith('/settings/')) && !session) {
     const redirectUrl = new URL('/login', req.url)
     const redirectRes = NextResponse.redirect(redirectUrl)
     // Transfer cookies from res to redirectRes (spread preserves httpOnly, secure, sameSite, etc.)

@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { PrismaClientKnownRequestError } from '@prisma/client'
 import { getInviteStatus, ROLE_LABELS, type MemberRoleType } from '@/lib/invite-utils'
 import { AcceptInviteForm } from './AcceptInviteForm'
 
