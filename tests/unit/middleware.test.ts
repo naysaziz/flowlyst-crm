@@ -169,3 +169,252 @@ describe('middleware — config matcher', () => {
     expect(pattern).toContain('_next/static')
   })
 })
+
+
+describe('middleware — workspace slug header', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key-test')
+    mockGetSession.mockReset()
+  })
+
+  it('sets default workspace slug for non-/app routes', async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'user-123', email: 'test@example.com' },
+          access_token: 'token',
+        },
+      },
+    })
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/some-path')
+    const response = await middleware(req)
+    expect(response?.headers.get('x-workspace-slug')).toBe('default')
+  })
+
+  it('sets default workspace slug for /app (no trailing slash)', async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'user-123', email: 'test@example.com' },
+          access_token: 'token',
+        },
+      },
+    })
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/app')
+    const response = await middleware(req)
+    expect(response?.headers.get('x-workspace-slug')).toBe('default')
+  })
+
+  it('extracts workspace slug from /app/{slug}', async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'user-123', email: 'test@example.com' },
+          access_token: 'token',
+        },
+      },
+    })
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/app/my-workspace')
+    const response = await middleware(req)
+    expect(response?.headers.get('x-workspace-slug')).toBe('my-workspace')
+  })
+
+  it('extracts workspace slug from /app/{slug}/nested', async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'user-123', email: 'test@example.com' },
+          access_token: 'token',
+        },
+      },
+    })
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/app/my-workspace/dashboard')
+    const response = await middleware(req)
+    expect(response?.headers.get('x-workspace-slug')).toBe('my-workspace')
+  })
+})
+
+describe('middleware — workspace slug validation', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key-test')
+    mockGetSession.mockReset()
+  })
+
+  it('defaults to "default" when slug contains invalid characters', async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'user-123', email: 'test@example.com' },
+          access_token: 'token',
+        },
+      },
+    })
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/app/invalid@slug')
+    const response = await middleware(req)
+    expect(response?.headers.get('x-workspace-slug')).toBe('default')
+  })
+
+  it('defaults to "default" when slug exceeds length limit', async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'user-123', email: 'test@example.com' },
+          access_token: 'token',
+        },
+      },
+    })
+    const { middleware } = await import('@/middleware')
+    const longSlug = 'a'.repeat(33) // > 32 chars
+    const req = makeRequest(`/app/${longSlug}`)
+    const response = await middleware(req)
+    expect(response?.headers.get('x-workspace-slug')).toBe('default')
+  })
+
+  it('accepts valid slug with hyphens and underscores', async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { id: 'user-123', email: 'test@example.com' },
+          access_token: 'token',
+        },
+      },
+    })
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/app/my-valid_slug-123')
+    const response = await middleware(req)
+    expect(response?.headers.get('x-workspace-slug')).toBe('my-valid_slug-123')
+  })
+})
+
+describe('middleware — false positive route guard', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key-test')
+    mockGetSession.mockReset()
+  })
+
+  it('does NOT guard /apples (only /app and /app/* are guarded)', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null } })
+
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/apples')
+    const response = await middleware(req)
+
+    // /apples should pass through — not guarded
+    expect(response?.status).not.toBe(307)
+    const location = response?.headers.get('location')
+    expect(location).toBeNull()
+  })
+})
+
+describe('middleware — env var validation', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('returns 500 when NEXT_PUBLIC_SUPABASE_URL is missing', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key-test')
+
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/app/dashboard')
+    const response = await middleware(req)
+
+    expect(response?.status).toBe(500)
+  })
+
+  it('returns 500 when NEXT_PUBLIC_SUPABASE_ANON_KEY is missing', async () => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', '')
+
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/app/dashboard')
+    const response = await middleware(req)
+
+    expect(response?.status).toBe(500)
+  })
+})
+
+describe('middleware — error handling security', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key-test')
+    mockGetSession.mockReset()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('redirects unauthenticated user from /app when Supabase client throws', async () => {
+    // Temporarily mock createServerClient to throw an error
+    const originalMock = mockCreateServerClient
+    mockCreateServerClient.mockImplementation(() => {
+      throw new Error('Supabase client error')
+    })
+
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/app/dashboard')
+    const response = await middleware(req)
+
+    // Should still redirect to login (session is null)
+    expect(response?.status).toBe(307)
+    const location = response?.headers.get('location')
+    expect(location).toContain('/login')
+
+    // Restore mock
+    mockCreateServerClient.mockImplementation(originalMock)
+  })
+
+  it('allows public routes when Supabase client throws', async () => {
+    mockCreateServerClient.mockImplementation(() => {
+      throw new Error('Supabase client error')
+    })
+
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/public')
+    const response = await middleware(req)
+
+    // Should not redirect (public route)
+    expect(response?.status).not.toBe(307)
+  })
+})
+
+describe('middleware — cookie handling edge cases', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co')
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'anon-key-test')
+    mockGetSession.mockReset()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('preserves cookies on redirect', async () => {
+    // Create a response with a test cookie already set
+    const originalRes = NextResponse.next()
+    originalRes.cookies.set('sb-session', 'token', { httpOnly: true })
+    vi.spyOn(NextResponse, 'next').mockReturnValue(originalRes)
+
+    mockGetSession.mockResolvedValue({ data: { session: null } })
+    const { middleware } = await import('@/middleware')
+    const req = makeRequest('/app')
+    const response = await middleware(req)
+
+    // Expect redirect response to have the cookie
+    const cookies = response.cookies.getAll()
+    expect(cookies).toHaveLength(1)
+    const cookie = cookies[0]
+    expect(cookie.name).toBe('sb-session')
+    expect(cookie.value).toBe('token')
+    // httpOnly flag may not be exposed via getAll, but cookie is present
+  })
+})

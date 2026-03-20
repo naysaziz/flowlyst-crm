@@ -21,15 +21,15 @@
            prisma generate + db push, package.json Appendix B deps, npm install
     status: deployed (init commit)
 
-[ ] TICKET-002: Supabase project setup + full DB schema migration (all tables + RLS policies)
+[x] TICKET-002: Supabase project setup + full DB schema migration (all tables + RLS policies)
     branch: feat/ticket-002-supabase-schema
-    PR: (to be opened)
+    PR: #5 (review-loops: 3)
     deps: TICKET-001
     effort: 2 days
     scope: Create Supabase project, run PRD §8 SQL migration (extensions, tables, RLS policies,
            helper functions, pg_cron jobs), update .env.local with Supabase URL/keys,
            seed.sql with workspace + admin user, verify RLS with supabase client test
-    status: pending
+    status: qa-passed (commit 1532425) — all 11 fixes verified ✅ static review complete
 
 [x] TICKET-003: Supabase Auth — email/password + Google OAuth flows
     branch: feat/TICKET-003-auth
@@ -41,19 +41,19 @@
            in Supabase dashboard, email confirmation flow, password reset flow
     status: deployed
 
-[ ] TICKET-004: Next.js middleware — auth guard + workspace resolution
+[~] TICKET-004: Next.js middleware — auth guard + workspace resolution
     branch: feat/ticket-004-middleware
-    PR: (to be opened)
+    PR: #2
     deps: TICKET-003
     effort: 1 day
     scope: src/app/middleware.ts — protect /app/* routes, redirect unauthenticated users
            to /login, resolve workspace slug from URL or user's default workspace,
            inject workspace context into request headers
-    status: pending
+    status: deployed
 
 [ ] TICKET-005: Core layout — sidebar nav, top bar, workspace switcher
     branch: feat/ticket-005-layout
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-004
     effort: 2 days
     scope: src/app/(app)/layout.tsx, sidebar with nav links (dashboard/contacts/deals/
@@ -63,7 +63,7 @@
 
 [ ] TICKET-006: PWA manifest + base service worker (offline shell + cache strategies)
     branch: feat/ticket-006-pwa
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-005
     effort: 1 day
     scope: public/manifest.json (icons, display, theme_color), @serwist/next config,
@@ -77,7 +77,7 @@
 ```
 [ ] TICKET-007: Contact list page — virtual scroll, search, tag filter
     branch: feat/ticket-007-contact-list
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-005
     effort: 2 days
     scope: /contacts page with @tanstack/react-virtual scroll (10k+ contacts),
@@ -87,7 +87,7 @@
 
 [ ] TICKET-008: Contact create/edit form with Zod validation
     branch: feat/ticket-008-contact-form
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-007
     effort: 1 day
     scope: /contacts/new and /contacts/:id/edit — react-hook-form + @hookform/resolvers,
@@ -96,7 +96,7 @@
 
 [ ] TICKET-009: Contact detail page + activity timeline component
     branch: feat/ticket-009-contact-detail
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-008
     effort: 2 days
     scope: /contacts/:id — contact header card, editable fields, activity timeline
@@ -105,7 +105,7 @@
 
 [ ] TICKET-010: Tag management (create/rename/delete + contact tagging)
     branch: feat/ticket-010-tags
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-007
     effort: 1 day
     scope: Settings > Tags page, bulk tag/untag contacts from list view, tag count display
@@ -113,7 +113,7 @@
 
 [ ] TICKET-011: CSV import — parse, duplicate detection, import preview
     branch: feat/ticket-011-csv-import
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-007
     effort: 2 days
     scope: /contacts/import — papaparse CSV parsing, column mapping UI, duplicate
@@ -123,7 +123,7 @@
 
 [ ] TICKET-012: Contact lists (static) — create/add/remove contacts
     branch: feat/ticket-012-contact-lists
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-007
     effort: 1 day
     scope: /contacts/lists, create/rename/delete lists, add contacts via search or
@@ -136,7 +136,7 @@
 ```
 [ ] TICKET-013: Pipeline Kanban board with @dnd-kit drag-and-drop
     branch: feat/ticket-013-kanban
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-005
     effort: 3 days
     scope: /deals — @dnd-kit/core DnD board, stages as columns, deal cards with
@@ -145,7 +145,7 @@
 
 [ ] TICKET-014: Deal create/edit form (value, stage, close date, owner)
     branch: feat/ticket-014-deal-form
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-013
     effort: 1 day
     scope: /deals/new and /deals/:id/edit — form with Zod, currency input, date picker,
@@ -154,7 +154,7 @@
 
 [ ] TICKET-015: Deal detail page + linked contacts + timeline
     branch: feat/ticket-015-deal-detail
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-014
     effort: 2 days
     scope: /deals/:id — deal header, stage progress bar, linked contacts (search/add),
@@ -163,7 +163,7 @@
 
 [ ] TICKET-016: Pipeline stage management in Settings
     branch: feat/ticket-016-pipeline-settings
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-013
     effort: 1 day
     scope: Settings > Pipeline — add/edit/delete/reorder stages, type (open/won/lost),
@@ -172,7 +172,7 @@
 
 [ ] TICKET-017: Activity logging on deal stage changes
     branch: feat/ticket-017-activity-log
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-015
     effort: 1 day
     scope: Supabase DB trigger or Edge Function hook on deals.stage_id UPDATE —
@@ -185,7 +185,7 @@
 ```
 [ ] TICKET-018: Workspace SES configuration UI + domain verification flow
     branch: feat/ticket-018-ses-config
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-005
     effort: 2 days
     scope: Settings > Email — BYOS vs Flowlyst Pool toggle, AWS key input (vault store),
@@ -195,7 +195,7 @@
 
 [ ] TICKET-019: Visual email block builder (header/text/button/image/divider/footer)
     branch: feat/ticket-019-email-builder
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-018
     effort: 4 days
     scope: /campaigns/new and /templates/new — drag-drop block editor (header/text/button/
@@ -205,7 +205,7 @@
 
 [ ] TICKET-020: Campaign create/edit — name, subject, preheader, recipients
     branch: feat/ticket-020-campaign-form
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-019
     effort: 2 days
     scope: /campaigns/new — multi-step form (settings → design → recipients → review),
@@ -214,7 +214,7 @@
 
 [ ] TICKET-021: Variable substitution + {{unsubscribe_link}} enforcement
     branch: feat/ticket-021-variable-substitution
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-020
     effort: 1 day
     scope: Server-side render: replace {{first_name}}, {{company}}, etc. per contact,
@@ -224,7 +224,7 @@
 
 [ ] TICKET-022: Email queue + pg_cron scheduler + SES send Edge Function
     branch: feat/ticket-022-email-queue
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-021
     effort: 3 days
     scope: supabase/functions/email-sender — dequeue pending emails in batches (14/s rate
@@ -234,7 +234,7 @@
 
 [ ] TICKET-023: Open tracking pixel endpoint + click redirect endpoint
     branch: feat/ticket-023-tracking
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-022
     effort: 1 day
     scope: /api/t/o/[token] — 1x1 GIF, record email_events.opened, update campaign stats;
@@ -243,7 +243,7 @@
 
 [ ] TICKET-024: SES SNS webhook handler (bounce/complaint/delivery)
     branch: feat/ticket-024-ses-webhook
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-022
     effort: 2 days
     scope: /api/webhooks/ses — SNS signature verification, process Bounce/Complaint/Delivery
@@ -253,7 +253,7 @@
 
 [ ] TICKET-025: Campaign analytics page (sent/opened/clicked/bounced stats)
     branch: feat/ticket-025-campaign-analytics
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-023, TICKET-024
     effort: 2 days
     scope: /campaigns/:id/analytics — stat cards (sent/delivered/opened/clicked/bounced/
@@ -267,7 +267,7 @@
 ```
 [ ] TICKET-026: Tasks module — CRUD, assignment, due reminders
     branch: feat/ticket-026-tasks
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-005
     effort: 2 days
     scope: /tasks — list view with filters (mine/all/overdue), create/edit/complete tasks,
@@ -276,7 +276,7 @@
 
 [ ] TICKET-027: In-app notifications — bell icon, dropdown, unread count
     branch: feat/ticket-027-notifications
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-005
     effort: 1 day
     scope: Top bar bell icon with unread badge, Supabase Realtime subscription to
@@ -285,7 +285,7 @@
 
 [ ] TICKET-028: Team invite flow (send invite → accept → join workspace)
     branch: feat/ticket-028-team-invites
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-003
     effort: 2 days
     scope: Settings > Team — invite by email (create workspace_invites row, send email via
@@ -295,7 +295,7 @@
 
 [ ] TICKET-029: Settings pages — workspace, email config, team members
     branch: feat/ticket-029-settings
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-028
     effort: 1 day
     scope: /settings — tabbed layout (Workspace / Email / Team / Pipeline),
@@ -304,7 +304,7 @@
 
 [ ] TICKET-030: Dashboard widgets (pipeline, activity feed, tasks due, campaign stats)
     branch: feat/ticket-030-dashboard
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-013, TICKET-025, TICKET-026
     effort: 2 days
     scope: /dashboard — pipeline summary (total deals/value by stage), recent activity feed
@@ -314,7 +314,7 @@
 
 [ ] TICKET-031: GitHub Actions CI/CD pipeline → Vercel + Supabase migrations
     branch: feat/ticket-031-cicd
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-001
     effort: 1 day
     scope: .github/workflows/ci.yml (ESLint + TypeScript check + Vitest on every PR),
@@ -324,7 +324,7 @@
 
 [ ] TICKET-032: Beta onboarding flow + welcome email sequence (self-dogfooding)
     branch: feat/ticket-032-onboarding
-    PR: (to be opened)
+    PR: #X
     deps: TICKET-022, TICKET-003
     effort: 2 days
     scope: Post-signup onboarding wizard (workspace setup → invite team → import contacts
