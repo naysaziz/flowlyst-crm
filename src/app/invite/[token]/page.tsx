@@ -14,17 +14,33 @@ type Props = {
 export default async function InviteAcceptPage({ params }: Props) {
   const { token } = await params
 
-  const invite = await prisma.workspaceInvite.findUnique({
-    where: { token },
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      expiresAt: true,
-      acceptedAt: true,
-      workspace: { select: { name: true, logoUrl: true } },
-    },
-  })
+  let invite
+  try {
+    invite = await prisma.workspaceInvite.findUnique({
+      where: { token },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        expiresAt: true,
+        acceptedAt: true,
+        workspace: { select: { name: true, logoUrl: true } },
+      },
+    })
+  } catch (error) {
+    return (
+      <main className="container flex min-h-screen items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle>Invitation not found</CardTitle>
+            <CardDescription>
+              This invitation link is invalid or has been removed.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </main>
+    )
+  }
 
   if (!invite) {
     return (
